@@ -1,6 +1,7 @@
 using _1_Repository.Data;
 using _1_Repository.Interfaces;
 using _2_Services.Interfaces;
+using Microsoft.Extensions.Logging;
 
 namespace _2_Services.Services
 {
@@ -14,6 +15,7 @@ namespace _2_Services.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly IOutBoxMessageService _outBoxMessageService;
         private readonly ICustomerAddressRepository _addressRepository;
+        private readonly ILogger<OrderService> _logger;
 
         public OrderService(
             IOrderRepository orderRepository,
@@ -23,7 +25,8 @@ namespace _2_Services.Services
             ICustomerService customerService,
             IUnitOfWork unitOfWork,
             IOutBoxMessageService outBoxMessageService,
-            ICustomerAddressRepository addressRepository)
+            ICustomerAddressRepository addressRepository,
+            ILogger<OrderService> logger)
         {
             _orderRepository = orderRepository;
             _cartRepository = cartRepository;
@@ -33,6 +36,7 @@ namespace _2_Services.Services
             _unitOfWork = unitOfWork;
             _outBoxMessageService = outBoxMessageService;
             _addressRepository = addressRepository;
+            _logger = logger;
         }
 
         public async Task<List<OrderDetailDto>> GetOrdersByCustomerAsync(int customerId)
@@ -67,7 +71,10 @@ namespace _2_Services.Services
                 ?? throw new NotFoundException($"Order {orderId} not found.");
 
             if (!isAdmin && order.CustomerId != customerId)
+            {
+                _logger.LogWarning("Forbidden order access attempt: OrderId={OrderId}, CustomerId={CustomerId}", orderId, customerId);
                 throw new ForbiddenException("You do not have permission to view this order.");
+            }
 
             return OrderMapper.MapToDetailDto(order);
         }
@@ -80,6 +87,9 @@ namespace _2_Services.Services
             {
                 throw new BadRequestException("Order placement data is required.");
             }
+
+            _logger.LogInformation("Initiating order placement for CustomerId={CustomerId}, PaymentMethod={PaymentMethod}, CouponCode={CouponCode}",
+                customerId, dto.PaymentMethod, dto.CouponCode);
 
             await _unitOfWork.BeginTransactionAsync();
 
@@ -107,11 +117,14 @@ namespace _2_Services.Services
                 await _unitOfWork.SaveChangesAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
+                _logger.LogInformation("Order {OrderId} placed successfully for CustomerId={CustomerId}, TotalPrice={TotalPrice}, ItemCount={ItemCount}",
+                    order.Id, customerId, finalTotal, orderItems.Count);
 
                 return OrderMapper.MapToDetailDto(order);
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Order placement failed for CustomerId={CustomerId}. Transaction rolled back", customerId);
                 await _unitOfWork.RollbackTransactionAsync();
                 throw;
             }
@@ -123,8 +136,7 @@ namespace _2_Services.Services
             if (id <= 0) throw new BadRequestException($"{paramName} must be greater than zero.");
         }
 
-        
-        //builds an immutable ShippingAddress snapshot.
+       
         private async Task<ShippingAddress> BuildShippingSnapshotAsync(int customerId, int customerAddressId)
         {
             var address = await _addressRepository.GetByIdAsync(customerAddressId)
@@ -173,6 +185,7 @@ namespace _2_Services.Services
 
             if (!await _productRepository.UpdateStocksAsync(productQuantities))
             {
+                _logger.LogWarning("Order placement aborted: Insufficient stock for product IDs: {ProductIds}", string.Join(", ", productIds));
                 throw new BadRequestException("Insufficient stock for one or more products.");
             }
 
@@ -222,26 +235,7 @@ namespace _2_Services.Services
 
         private static Order CreateOrderEntity(int customerId, PlaceOrderDto dto, List<OrderItem> items, CouponDto? coupon, decimal finalTotal, ShippingAddress shippingSnapshot)
         {
-            var order = new Order
-            {
-                CustomerId = customerId,
-                OrderDate = DateTime.UtcNow,
-                TotalPrice = finalTotal,
-                OrderItems = items,
-                ShippingAddress = shippingSnapshot,
-                Payment = new Payment
-                {
-                    Amount = finalTotal,
-                    Date = DateTime.UtcNow,
-                    Method = dto.PaymentMethod,
-                    Status = (int)PaymentStatus.Pending
-                },
-                Shipment = new Shipment
-                {
-                    Status = "Pending",
-                    EstimatedDeliveryDate = DateTime.UtcNow.AddDays(5)
-                }
-            };
+            Order order = CreateOrder(customerId, dto, items, finalTotal, shippingSnapshot);
 
             if (coupon != null)
             {
@@ -255,6 +249,72 @@ namespace _2_Services.Services
             }
 
             return order;
+        }
+
+        private static Order CreateOrder(int customerId, PlaceOrderDto dto, List<OrderItem> items, decimal finalTotal, ShippingAddress shippingSnapshot)
+        {
+            return new Order
+            {
+                CustomerId = customerId,
+                OrderDate = DateTime.UtcNow,
+                TotalPrice = finalTotal,
+                OrderItems = items,
+                ShippingAddress = shippingSnapshot,
+                Payment = new Payment
+                {
+                    Amount = finalTotal,
+                    PaymentDate = DateTime.UtcNow,
+                    Method = dto.PaymentMethod,
+                    Status = (int)PaymentStatus.Pending
+                },
+                Shipment = new Shipment
+                {
+                    Status = (int)ShipmentStatus.Pending,
+                    EstimatedDeliveryDate = DateTime.UtcNow.AddDays(5)
+                }
+            };
+        }
+
+        public async Task<bool> ConfirmPaymentAsync(int orderId, int userId, string paymentIntentId)
+        {
+            _logger.LogInformation("Processing payment confirmation for OrderId={OrderId}, UserId={UserId}, PaymentIntentId={PaymentIntentId}",
+                orderId, userId, paymentIntentId);
+
+            var order = await _orderRepository.GetOrderWithPaymentAndShipmentAsync(orderId, userId);
+
+            if (order == null)
+            {
+                _logger.LogWarning("Payment confirmation failed. OrderId={OrderId} not found for UserId={UserId}", orderId, userId);
+                return false;
+            }
+
+            order.OrderStatus = (int)OrderStatus.confirmed;
+
+            if (order.Payment != null)
+            {
+                order.Payment.Status = (int)PaymentStatus.Completed;
+                order.Payment.TransactionId = paymentIntentId;
+                order.Payment.PaymentDate = DateTime.UtcNow;
+            }
+
+            if (order.Shipment == null)
+            {
+                order.Shipment = new Shipment
+                {
+                    OrderId = order.Id,
+                    Status = (int)ShipmentStatus.Pending,
+                    Carrier = "Global Express",
+                    TrackingNumber = $"TRK-{Guid.NewGuid().ToString("N")[..8].ToUpper()}",
+                    EstimatedDeliveryDate = DateTime.UtcNow.AddDays(3),
+                    ShipmentDate = DateTime.UtcNow
+                };
+            }
+
+            _orderRepository.Update(order);
+            await _unitOfWork.SaveChangesAsync();
+
+            _logger.LogInformation("Payment confirmed successfully for OrderId={OrderId}. OrderStatus set to Confirmed", orderId);
+            return true;
         }
     }
 }

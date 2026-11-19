@@ -359,21 +359,23 @@ namespace _1_Repository.Migrations
 
             modelBuilder.Entity("_1_Repository.Data.Category", b =>
                 {
-                    b.Property<int>("CategoryId")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("int")
+                        .HasColumnName("CategoryId");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CategoryId"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("CategoryName")
+                    b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("NVARCHAR");
+                        .HasColumnType("NVARCHAR")
+                        .HasColumnName("CategoryName");
 
                     b.Property<int?>("ParentCategoryId")
                         .HasColumnType("int");
 
-                    b.HasKey("CategoryId");
+                    b.HasKey("Id");
 
                     b.HasIndex("ParentCategoryId")
                         .HasDatabaseName("IX_Categories_ParentCategoryId");
@@ -470,7 +472,8 @@ namespace _1_Repository.Migrations
                         .HasColumnType("int");
 
                     b.Property<DateTime>("OrderDate")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasColumnName("OrderDate");
 
                     b.Property<int>("OrderStatus")
                         .HasColumnType("int");
@@ -545,6 +548,10 @@ namespace _1_Repository.Migrations
 
                     b.Property<int>("Status")
                         .HasColumnType("INT");
+
+                    b.Property<string>("TransactionId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
@@ -646,10 +653,9 @@ namespace _1_Repository.Migrations
                     b.Property<DateTime?>("ShipmentDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("Status")
-                        .IsRequired()
+                    b.Property<int>("Status")
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("int");
 
                     b.Property<string>("TrackingNumber")
                         .HasMaxLength(100)
@@ -671,33 +677,39 @@ namespace _1_Repository.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("ShippingBuildingNumber")
+                    b.Property<string>("BuildingNumber")
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("ShippingBuildingNumber");
 
-                    b.Property<string>("ShippingCity")
+                    b.Property<string>("City")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("ShippingCity");
 
-                    b.Property<string>("ShippingPhone")
+                    b.Property<string>("Phone")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("ShippingPhone");
 
-                    b.Property<string>("ShippingPostalCode")
+                    b.Property<string>("PostalCode")
                         .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("ShippingPostalCode");
 
-                    b.Property<string>("ShippingRecipientName")
+                    b.Property<string>("RecipientName")
                         .IsRequired()
                         .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
+                        .HasColumnType("nvarchar(150)")
+                        .HasColumnName("ShippingRecipientName");
 
-                    b.Property<string>("ShippingStreet")
+                    b.Property<string>("Street")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("ShippingStreet");
 
                     b.HasKey("Id");
 

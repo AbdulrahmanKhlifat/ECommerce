@@ -18,6 +18,4 @@ public class CreateCustomerDto
     [Required]
     [StringLength(100),MinLength(5)]
     public string Password { get; set; } = string.Empty;
-
-    public string? Role { get; set; } = "customer";
 }

@@ -6,7 +6,7 @@ namespace _1_Repository.Data
 
         public int OrderId { get; set; }
 
-        public DateTime? Date { get; set; }
+        public DateTime? ShipmentDate { get; set; }
 
         public DateTime? EstimatedDeliveryDate { get; set; }
 
@@ -16,7 +16,7 @@ namespace _1_Repository.Data
 
         public string? Carrier { get; set; }
 
-        public string Status { get; set; } = "Pending";
+        public int Status { get; set; } 
 
         public Order Order { get; set; } = null!;
     }

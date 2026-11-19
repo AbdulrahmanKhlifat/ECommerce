@@ -57,7 +57,7 @@ namespace _2_Services.Services
 
             _logger.LogWarning("Customer or Admin not found with ID {CustomerId}", id);
             throw new NotFoundException($"Customer with ID {id} not found.");
-        }
+            }
 
         public async Task<CustomerAuthDto?> GetCustomerAuthByIdAsync(int id)
         {
@@ -207,6 +207,7 @@ namespace _2_Services.Services
 
             _customerRepository.Delete(customer);
             await _unitOfWork.SaveChangesAsync();
+            _logger.LogInformation("Customer account deleted for CustomerId={CustomerId}", customerId);
         }
 
         public async Task ChangePasswordAsync(int customerId, string newPassword)
@@ -225,12 +226,14 @@ namespace _2_Services.Services
 
             if (user is null)
             {
+                _logger.LogWarning("Password change failed: User with ID {CustomerId} not found", customerId);
                 throw new NotFoundException($"User with ID {customerId} not found.");
             }
 
             user.PasswordHash = _passwordHasher.Hash(newPassword);
             _userRepository.Update(user);
             await _unitOfWork.SaveChangesAsync();
+            _logger.LogInformation("Password changed successfully for CustomerId={CustomerId}", customerId);
         }
 
         public async Task UpdateCustomerAsync(int customerId, UpdateCustomerDto dto)
@@ -242,6 +245,7 @@ namespace _2_Services.Services
             customer.Email = dto.Email ?? customer.Email;
             _customerRepository.Update(customer);
             await _unitOfWork.SaveChangesAsync();
+            _logger.LogInformation("Customer profile updated for CustomerId={CustomerId}", customerId);
         }
         
         private async Task<Customer> ValidateUpdateCustomerDto(int customerId, UpdateCustomerDto dto)

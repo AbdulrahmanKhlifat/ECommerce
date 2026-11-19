@@ -29,8 +29,6 @@ namespace _2_Services.Services
             _logger = logger;
         }
 
-        
-
         public async Task<EmailVerification?> GetEmailVerificationByIdAsync(string verificationId)
         {
             if (string.IsNullOrWhiteSpace(verificationId))
@@ -81,7 +79,7 @@ namespace _2_Services.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to send verification email to Customer ID {CustomerId}", customerId);
+                _logger.LogError(ex, "Failed to send verification email to Customer ID {CustomerId} ({Email}): {Message}", customerId, customer.Email, ex.Message);
                 throw new InternalServerErrorException("Failed to send verification email. Please try again later.");
             }
 
@@ -127,10 +125,8 @@ namespace _2_Services.Services
             return isMatched;
         }
 
-
         private async Task InvalidatePreviousVerificationsAsync(int customerId)
         {
-
             var pendingVerifications = await _emailVerificationRepository.GetPendingVerificationsByCustomerIdAsync(customerId);
 
             if (pendingVerifications != null && pendingVerifications.Any())

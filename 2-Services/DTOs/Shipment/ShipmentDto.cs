@@ -9,5 +9,5 @@ public class ShipmentDto
     public DateTime? ActualDeliveryDate { get; set; }
     public string? TrackingNumber { get; set; }
     public string? Carrier { get; set; }
-    public string Status { get; set; } = string.Empty;
+    public int Status { get; set; }
 }

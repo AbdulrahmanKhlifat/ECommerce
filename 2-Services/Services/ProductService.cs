@@ -2,8 +2,8 @@ using _1_Repository.Data;
 using _1_Repository.Interfaces;
 using _2_Services.DTOs;
 using _2_Services.Interfaces;
-using Microsoft.Extensions.Logging;
 using Elastic.Clients.Elasticsearch;
+using Microsoft.Extensions.Logging;
 
 
 namespace _2_Services.Services
@@ -157,6 +157,11 @@ namespace _2_Services.Services
         {
             if (dto == null)
                 throw new BadRequestException("Product data is required.");
+
+            if (dto.Price <= 0)
+            {
+                throw new ArgumentException("Product price must be greater than zero.");
+            }
 
             var category = await _categoryRepository.GetByIdAsync(dto.CategoryId);
             if (category == null)

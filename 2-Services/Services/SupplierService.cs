@@ -1,5 +1,6 @@
 using _1_Repository.Interfaces;
 using _2_Services.Interfaces;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,11 +12,16 @@ namespace _2_Services.Services
     {
         private readonly ISupplierRepository _supplierRepository;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ILogger<SupplierService> _logger;
 
-        public SupplierService(ISupplierRepository supplierRepository, IUnitOfWork unitOfWork)
+        public SupplierService(
+            ISupplierRepository supplierRepository,
+            IUnitOfWork unitOfWork,
+            ILogger<SupplierService> logger)
         {
             _supplierRepository = supplierRepository;
             _unitOfWork = unitOfWork;
+            _logger = logger;
         }
 
         public async Task<List<SupplierDto>> GetAllSuppliersAsync()
@@ -60,6 +66,8 @@ namespace _2_Services.Services
             await _supplierRepository.AddAsync(supplier);
             await _unitOfWork.SaveChangesAsync();
 
+            _logger.LogInformation("Supplier created: SupplierId={SupplierId}, Name={SupplierName}", supplier.Id, supplier.Name);
+
             return  SupplierMapper.MapToDto(supplier);
         }
 
@@ -84,6 +92,8 @@ namespace _2_Services.Services
             _supplierRepository.Update(supplier);
             await _unitOfWork.SaveChangesAsync();
 
+            _logger.LogInformation("Supplier updated: SupplierId={SupplierId}, Name={SupplierName}", id, supplier.Name);
+
             return SupplierMapper.MapToDto(supplier);
         }
 
@@ -98,6 +108,8 @@ namespace _2_Services.Services
 
             _supplierRepository.Delete(supplier);
             await _unitOfWork.SaveChangesAsync();
+
+            _logger.LogInformation("Supplier deleted: SupplierId={SupplierId}", id);
             return true;
         }
 

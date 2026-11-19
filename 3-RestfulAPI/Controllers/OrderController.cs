@@ -67,5 +67,20 @@ namespace _3_RestfulAPI.Controllers
             var order = await _orderService.PlaceOrderAsync(User.GetUserId(), dto);
             return CreatedAtAction(nameof(GetOrderById), new { orderId = order.Id }, order);
         }
+
+        [HttpPost("{orderId:int}/confirm-payment")]
+        [EnableRateLimiting("HighCostLimiter")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> ConfirmPayment(int orderId, [FromBody] ConfirmPaymentDto dto)
+        {
+            var result = await _orderService.ConfirmPaymentAsync(orderId, User.GetUserId(), dto.PaymentIntentId);
+            if (!result)
+                return BadRequest(new { message = "Payment confirmation failed." });
+
+            return Ok(new { message = "Payment confirmed successfully." });
+        }
     }
 }

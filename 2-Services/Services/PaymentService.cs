@@ -1,6 +1,7 @@
 using _1_Repository.Data;
 using _1_Repository.Interfaces;
 using _2_Services.Interfaces;
+using Microsoft.Extensions.Logging;
 using System.Threading.Tasks;
 
 namespace _2_Services.Services
@@ -8,10 +9,12 @@ namespace _2_Services.Services
     public class PaymentService : IPaymentService
     {
         private readonly IPaymentRepository _paymentRepository;
+        private readonly ILogger<PaymentService> _logger;
 
-        public PaymentService(IPaymentRepository paymentRepository)
+        public PaymentService(IPaymentRepository paymentRepository, ILogger<PaymentService> logger)
         {
             _paymentRepository = paymentRepository;
+            _logger = logger;
         }
 
         public async Task<PaymentDto?> GetPaymentByIdAsync(int id)
@@ -21,8 +24,12 @@ namespace _2_Services.Services
 
             var payment = await _paymentRepository.GetByIdAsync(id);
             if (payment == null)
+            {
+                _logger.LogWarning("Payment with ID {PaymentId} not found", id);
                 throw new NotFoundException($"Payment with ID {id} not found.");
+            }
 
+            _logger.LogDebug("Payment {PaymentId} retrieved successfully", id);
             return PaymentMapper.MapToDto(payment);
         }
 
@@ -33,8 +40,12 @@ namespace _2_Services.Services
 
             var payment = await _paymentRepository.GetByOrderIdAsync(orderId);
             if (payment == null)
+            {
+                _logger.LogWarning("Payment for Order ID {OrderId} not found", orderId);
                 throw new NotFoundException($"Payment for Order ID {orderId} not found.");
+            }
 
+            _logger.LogDebug("Payment for Order {OrderId} retrieved successfully", orderId);
             return PaymentMapper.MapToDto(payment);
         }
 

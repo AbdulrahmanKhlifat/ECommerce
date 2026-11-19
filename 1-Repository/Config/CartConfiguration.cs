@@ -17,6 +17,12 @@ namespace _1_Repository.Config
                 .WithOne(cust => cust.Cart)
                 .HasForeignKey<Cart>(c => c.CustomerId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // Explicit unique index: enforces one-to-one at the DB level.
+            // EF Core already implies this from WithOne(), but declaring it
+            // explicitly makes the constraint self-documenting and intention clear.
+            builder.HasIndex(c => c.CustomerId)
+                .IsUnique();
         }
     }
 }

@@ -10,7 +10,7 @@ public class OrderDetailDto
     public OrderStatus OrderStatus { get; set; }
 
     public string? PaymentMethod { get; set; }
-    public string? ShipmentStatus { get; set; }
+    public ShipmentStatus ShipmentStatus { get; set; }
     public string? CouponCode { get; set; }
     public ShippingAddressDto? ShippingAddress { get; set; }
     public List<OrderItemDetailDto> Items { get; set; } = new List<OrderItemDetailDto>();

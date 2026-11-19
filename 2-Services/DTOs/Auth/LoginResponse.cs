@@ -1,4 +1,4 @@
-﻿public class LoginResponse
+public class LoginResponse
 {
     public string VerificationId { get; set; } = string.Empty;
 

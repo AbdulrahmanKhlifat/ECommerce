@@ -60,6 +60,9 @@ namespace _2_Services.Services
                 cart.CartItems.Add(new CartItem { ProductId = dto.ProductId, Quantity = dto.Quantity, UnitPrice = product.Price });
             }
 
+            _logger.LogInformation("Added ProductId={ProductId} (Quantity={Quantity}) to cart for CustomerId={CustomerId}",
+                dto.ProductId, dto.Quantity, customerId);
+
             return await SaveAndMapAsync(cart);
         }
 
@@ -78,6 +81,9 @@ namespace _2_Services.Services
             }
 
             item.Quantity = dto.Quantity;
+            _logger.LogInformation("Updated CartItem {CartItemId} to Quantity={Quantity} for CustomerId={CustomerId}",
+                cartItemId, dto.Quantity, customerId);
+
             return await SaveAndMapAsync(cart);
         }
 
@@ -87,6 +93,9 @@ namespace _2_Services.Services
             var (cart, item) = await GetCartAndItemAsync(customerId, cartItemId);
 
             cart.CartItems.Remove(item);
+            _logger.LogInformation("Removed CartItem {CartItemId} from cart for CustomerId={CustomerId}",
+                cartItemId, customerId);
+
             return await SaveAndMapAsync(cart);
         }
 
@@ -98,6 +107,7 @@ namespace _2_Services.Services
 
             cart.CartItems.Clear();
             await SaveAndMapAsync(cart);
+            _logger.LogInformation("Cleared cart for CustomerId={CustomerId}", customerId);
         }
 
         private static void ValidateId(int id, string paramName)

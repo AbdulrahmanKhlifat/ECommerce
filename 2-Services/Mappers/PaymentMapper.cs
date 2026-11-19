@@ -6,7 +6,7 @@ public class PaymentMapper
     {
         Id = p.Id,
         Amount = p.Amount,
-        PaymentDate = p.Date,
+        PaymentDate = p.PaymentDate,
         Method = p.Method,
         OrderId = p.OrderId
     };

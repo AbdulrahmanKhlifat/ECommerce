@@ -45,6 +45,12 @@ namespace _3_RestfulAPI.Controllers
         {
             await EnsureOrderAccessAsync(orderId);
             var shipment = await _shipmentService.GetShipmentByOrderIdAsync(orderId);
+            if (shipment == null)
+            {
+                    
+                return NotFound(new { message = $"No shipment found for Order #{orderId}" });
+            }
+
             return Ok(shipment);
         }
 

@@ -1,6 +1,7 @@
 using _1_Repository.Data;
 using _1_Repository.Interfaces;
 using _2_Services.Interfaces;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 
@@ -10,11 +11,16 @@ namespace _2_Services.Services
     {
         private readonly IShipmentRepository _shipmentRepository;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ILogger<ShipmentService> _logger;
 
-        public ShipmentService(IShipmentRepository shipmentRepository, IUnitOfWork unitOfWork)
+        public ShipmentService(
+            IShipmentRepository shipmentRepository,
+            IUnitOfWork unitOfWork,
+            ILogger<ShipmentService> logger)
         {
             _shipmentRepository = shipmentRepository;
             _unitOfWork = unitOfWork;
+            _logger = logger;
         }
 
         public async Task<ShipmentDto?> GetShipmentByIdAsync(int id)
@@ -23,6 +29,7 @@ namespace _2_Services.Services
                 throw new BadRequestException("Shipment ID must be greater than zero.");
 
             var shipment = await _shipmentRepository.GetByIdAsync(id);
+
             if (shipment == null)
                 throw new NotFoundException($"Shipment with ID {id} not found.");
 
@@ -53,8 +60,20 @@ namespace _2_Services.Services
             if (shipment == null)
                 throw new NotFoundException($"Shipment with ID {id} not found.");
 
-            shipment.Status = dto.Status;
+            shipment.Status = (int)dto.Status;
+            UpdateShipmentDto(dto, shipment);
 
+            _shipmentRepository.Update(shipment);
+            await _unitOfWork.SaveChangesAsync();
+
+            _logger.LogInformation("Shipment updated: ShipmentId={ShipmentId}, OrderId={OrderId}, Status={Status}, TrackingNumber={TrackingNumber}",
+                id, shipment.OrderId, shipment.Status, shipment.TrackingNumber);
+
+            return ShipmentMapper.MapToDto(shipment);
+        }
+
+        private static void UpdateShipmentDto(UpdateShipmentDto dto, Shipment shipment)
+        {
             if (dto.TrackingNumber != null)
                 shipment.TrackingNumber = dto.TrackingNumber;
 
@@ -62,20 +81,14 @@ namespace _2_Services.Services
                 shipment.Carrier = dto.Carrier;
 
             if (dto.ShipmentDate.HasValue)
-                shipment.Date = dto.ShipmentDate;
+                shipment.ShipmentDate = dto.ShipmentDate;
 
             if (dto.EstimatedDeliveryDate.HasValue)
                 shipment.EstimatedDeliveryDate = dto.EstimatedDeliveryDate;
 
             if (dto.ActualDeliveryDate.HasValue)
                 shipment.ActualDeliveryDate = dto.ActualDeliveryDate;
-
-            _shipmentRepository.Update(shipment);
-            await _unitOfWork.SaveChangesAsync();
-
-            return ShipmentMapper.MapToDto(shipment);
         }
 
-        
     }
 }

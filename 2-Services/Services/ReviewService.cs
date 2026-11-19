@@ -1,6 +1,7 @@
 using _1_Repository.Data;
 using _1_Repository.Interfaces;
 using _2_Services.Interfaces;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,17 +15,20 @@ namespace _2_Services.Services
         private readonly ICustomerRepository _customerRepository;
         private readonly IProductRepository _productRepository;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ILogger<ReviewService> _logger;
 
         public ReviewService(
             IReviewRepository reviewRepository,
             ICustomerRepository customerRepository,
             IProductRepository productRepository,
-            IUnitOfWork unitOfWork)
+            IUnitOfWork unitOfWork,
+            ILogger<ReviewService> logger)
         {
             _reviewRepository = reviewRepository;
             _customerRepository = customerRepository;
             _productRepository = productRepository;
             _unitOfWork = unitOfWork;
+            _logger = logger;
         }
 
         public async Task<List<ReviewDto>> GetReviewsByProductAsync(int productId)
@@ -91,6 +95,9 @@ namespace _2_Services.Services
             await _reviewRepository.AddAsync(review);
             await _unitOfWork.SaveChangesAsync();
 
+            _logger.LogInformation("Review added: ReviewId={ReviewId}, ProductId={ProductId}, CustomerId={CustomerId}, Rating={Rating}",
+                review.Id, review.ProductId, review.CustomerId, review.Rating);
+
             return new ReviewDto
             {
                 Id = review.Id,
@@ -113,10 +120,15 @@ namespace _2_Services.Services
                 throw new NotFoundException($"Review with ID {reviewId} not found.");
 
             if (!isAdmin && review.CustomerId != customerId)
+            {
+                _logger.LogWarning("Forbidden review delete attempt: ReviewId={ReviewId}, CustomerId={CustomerId}", reviewId, customerId);
                 throw new ForbiddenException("You do not have permission to delete this review.");
+            }
 
             _reviewRepository.Delete(review);
             await _unitOfWork.SaveChangesAsync();
+
+            _logger.LogInformation("Review deleted: ReviewId={ReviewId}", reviewId);
             return true;
         }
     }

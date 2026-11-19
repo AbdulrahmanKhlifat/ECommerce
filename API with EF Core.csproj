@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -9,7 +9,16 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="1-Repository\**" />
+    <Compile Remove="2-Services\**" />
+    <Compile Remove="3-RestfulAPI\**" />
+    <Compile Remove="ProductTest\**" />
+    <Compile Remove="frontend\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Elastic.Clients.Elasticsearch" Version="9.5.2" />
+    <PackageReference Include="Qdrant.Client" Version="1.19.0" />
   </ItemGroup>
 
 </Project>

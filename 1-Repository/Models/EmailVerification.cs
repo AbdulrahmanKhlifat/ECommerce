@@ -1,8 +1,7 @@
-﻿using _1_Repository.Data;
+using _1_Repository.Data;
 
 public class EmailVerification
 {
-
     public int Id { get; set; }
 
     public int CustomerId { get; set; }
@@ -18,5 +17,4 @@ public class EmailVerification
     public DateTime? UsedAt { get; set; }
 
     public DateTime CreatedAt { get; set; }
-
 }

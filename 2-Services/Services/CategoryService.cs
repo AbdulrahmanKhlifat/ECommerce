@@ -1,6 +1,7 @@
 using _1_Repository.Data;
 using _1_Repository.Interfaces;
 using _2_Services.Interfaces;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,11 +13,16 @@ namespace _2_Services.Services
     {
         private readonly ICategoryRepository _categoryRepository;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ILogger<CategoryService> _logger;
 
-        public CategoryService(ICategoryRepository categoryRepository, IUnitOfWork unitOfWork)
+        public CategoryService(
+            ICategoryRepository categoryRepository,
+            IUnitOfWork unitOfWork,
+            ILogger<CategoryService> logger)
         {
             _categoryRepository = categoryRepository;
             _unitOfWork = unitOfWork;
+            _logger = logger;
         }
 
         public async Task<List<CategoryDto>> GetAllCategoriesAsync()
@@ -57,6 +63,8 @@ namespace _2_Services.Services
             await _categoryRepository.AddAsync(category);
             await _unitOfWork.SaveChangesAsync();
 
+            _logger.LogInformation("Category created: CategoryId={CategoryId}, Name={CategoryName}", category.Id, category.Name);
+
             return CategoryMapper.MapToDto(category);
         }
 
@@ -90,6 +98,8 @@ namespace _2_Services.Services
             _categoryRepository.Update(category);
             await _unitOfWork.SaveChangesAsync();
 
+            _logger.LogInformation("Category updated: CategoryId={CategoryId}, Name={CategoryName}", id, category.Name);
+
             return CategoryMapper.MapToDto(category);
         }
 
@@ -104,6 +114,8 @@ namespace _2_Services.Services
 
             _categoryRepository.Delete(category);
             await _unitOfWork.SaveChangesAsync();
+
+            _logger.LogInformation("Category deleted: CategoryId={CategoryId}", id);
             return true;
         }
     }

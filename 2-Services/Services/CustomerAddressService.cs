@@ -1,6 +1,7 @@
 using _1_Repository.Data;
 using _1_Repository.Interfaces;
 using _2_Services.Interfaces;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,11 +13,16 @@ namespace _2_Services.Services
     {
         private readonly ICustomerAddressRepository _addressRepository;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ILogger<CustomerAddressService> _logger;
 
-        public CustomerAddressService(ICustomerAddressRepository addressRepository, IUnitOfWork unitOfWork)
+        public CustomerAddressService(
+            ICustomerAddressRepository addressRepository,
+            IUnitOfWork unitOfWork,
+            ILogger<CustomerAddressService> logger)
         {
             _addressRepository = addressRepository;
             _unitOfWork = unitOfWork;
+            _logger = logger;
         }
 
         public async Task<List<CustomerAddressDto>> GetAddressesByCustomerAsync(int customerId)
@@ -73,6 +79,9 @@ namespace _2_Services.Services
             await _addressRepository.AddAsync(address);
             await _unitOfWork.SaveChangesAsync();
 
+            _logger.LogInformation("Address created: AddressId={AddressId}, CustomerId={CustomerId}, IsDefault={IsDefault}",
+                address.Id, customerId, address.IsDefault);
+
             return CustomerAddressMapper.MapToDto(address);
         }
 
@@ -106,6 +115,9 @@ namespace _2_Services.Services
             _addressRepository.Update(address);
             await _unitOfWork.SaveChangesAsync();
 
+            _logger.LogInformation("Address updated: AddressId={AddressId}, CustomerId={CustomerId}, IsDefault={IsDefault}",
+                addressId, customerId, address.IsDefault);
+
             return CustomerAddressMapper.MapToDto(address);
         }
 
@@ -123,6 +135,8 @@ namespace _2_Services.Services
 
             _addressRepository.Delete(address);
             await _unitOfWork.SaveChangesAsync();
+
+            _logger.LogInformation("Address deleted: AddressId={AddressId}, CustomerId={CustomerId}", addressId, customerId);
             return true;
         }
 

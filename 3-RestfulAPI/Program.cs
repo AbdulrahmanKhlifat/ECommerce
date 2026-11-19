@@ -38,7 +38,13 @@ var client = new ElasticsearchClient(settings);
 builder.Services.AddSingleton(client);
 
 
-builder.Host.UseSerilog();
+builder.Host.UseSerilog((context, services, configuration) =>
+    configuration
+        .ReadFrom.Configuration(context.Configuration)
+        .ReadFrom.Services(services)
+        .Enrich.FromLogContext()
+        .Enrich.WithProperty("Application", "ShopNest")
+        .Enrich.WithProperty("Environment", context.HostingEnvironment.EnvironmentName));
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -67,52 +73,29 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddSwaggerGen(options =>
 {
-    // ===============================
-    // 1) Define the JWT Bearer security scheme
-    // ===============================
-    //
-    // This tells Swagger that our API uses JWT Bearer authentication
-    // through the HTTP Authorization header.
+    
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
-        // The name of the HTTP header where the token will be sent.
+        
         Name = "Authorization",
 
-
-        // Indicates this is an HTTP authentication scheme.
         Type = SecuritySchemeType.Http,
 
-
-        // Specifies the authentication scheme name.
-        // Must be exactly "Bearer" for JWT Bearer tokens.
         Scheme = "Bearer",
 
-
-        // Optional metadata to describe the token format.
         BearerFormat = "JWT",
 
-
-        // Specifies that the token is sent in the request header.
         In = ParameterLocation.Header,
-
-
-        // Text shown in Swagger UI to guide the user.
+        
         Description = "Enter: Bearer {your JWT token}"
     });
-
-
-    // ===============================
-    // 2) Require the Bearer scheme for secured endpoints
-    // ===============================
-    //
-    // This tells Swagger that endpoints protected by [Authorize]
-    // require the Bearer token defined above.
+   
     options.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {
             new OpenApiSecurityScheme
             {
-                // Reference the previously defined "Bearer" security scheme.
+             
                 Reference = new OpenApiReference
                 {
                     Type = ReferenceType.SecurityScheme,
@@ -120,9 +103,6 @@ builder.Services.AddSwaggerGen(options =>
                 }
             },
 
-
-            // No scopes are required for JWT Bearer authentication.
-            // This array is empty because JWT does not use OAuth scopes here.
             new string[] {}
         }
     });
@@ -153,7 +133,7 @@ builder.Services.AddRateLimiter(options =>
             partitionKey: "Global",
             factory: _ => new FixedWindowRateLimiterOptions
             {
-                PermitLimit = 1000,
+                PermitLimit = 10000,
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0
             });
@@ -167,7 +147,7 @@ builder.Services.AddRateLimiter(options =>
             partitionKey: ip,
             factory: _ => new FixedWindowRateLimiterOptions
             {
-                PermitLimit = 15,
+                PermitLimit = 100,
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0
             });
@@ -181,7 +161,7 @@ builder.Services.AddRateLimiter(options =>
             partitionKey: partitionKey,
             factory: _ => new FixedWindowRateLimiterOptions
             {
-                PermitLimit = 10,
+                PermitLimit = 100,
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0
             });
@@ -195,7 +175,7 @@ builder.Services.AddRateLimiter(options =>
             partitionKey: partitionKey,
             factory: _ => new FixedWindowRateLimiterOptions
             {
-                PermitLimit = 10,
+                PermitLimit = 100,
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0
             });
@@ -232,11 +212,18 @@ builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("Smtp"
 builder.Services.AddScoped<IPasswordHasher,Argon2PasswordHasher>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 
+builder.Services.AddHttpClient<ProductRagService>();
+
 builder.Services.AddSingleton<IAuthorizationHandler, CustomerOwnerOrAdminHandler>();
 
 
 builder.Services.AddSingleton<IOrderEmailQueue, OrderEmailQueue>();
 builder.Services.AddHostedService<OrderEmailBackgroundService>();
+
+builder.Services.AddHttpsRedirection(options =>
+{
+    options.HttpsPort = 7258;
+});
 
 
 // Repository
@@ -340,6 +327,17 @@ app.UseHttpsRedirection();
 
 app.UseDefaultFiles();
 app.UseStaticFiles();
+
+// Security headers middleware
+app.Use(async (context, next) =>
+{
+    context.Response.Headers.Append("X-Content-Type-Options", "nosniff");
+    context.Response.Headers.Append("X-Frame-Options", "DENY");
+    context.Response.Headers.Append("X-XSS-Protection", "1; mode=block");
+    context.Response.Headers.Append("Referrer-Policy", "strict-origin-when-cross-origin");
+    context.Response.Headers.Remove("Server"); // Hide Kestrel fingerprint
+    await next();
+});
 
 app.UseSerilogRequestLogging();
 

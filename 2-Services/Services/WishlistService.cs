@@ -1,6 +1,7 @@
 using _1_Repository.Data;
 using _1_Repository.Interfaces;
 using _2_Services.Interfaces;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,15 +14,18 @@ namespace _2_Services.Services
         private readonly IWishlistRepository _wishlistRepository;
         private readonly IProductRepository _productRepository;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ILogger<WishlistService> _logger;
 
         public WishlistService(
             IWishlistRepository wishlistRepository,
             IProductRepository productRepository,
-            IUnitOfWork unitOfWork)
+            IUnitOfWork unitOfWork,
+            ILogger<WishlistService> logger)
         {
             _wishlistRepository = wishlistRepository;
             _productRepository = productRepository;
             _unitOfWork = unitOfWork;
+            _logger = logger;
         }
 
         public async Task<WishlistDto> GetWishlistAsync(int customerId)
@@ -82,6 +86,7 @@ namespace _2_Services.Services
             }
 
             var updated = await _wishlistRepository.GetWishlistByCustomerIdAsync(customerId);
+            _logger.LogInformation("Added ProductId={ProductId} to wishlist for CustomerId={CustomerId}", productId, customerId);
             return WishlistMapper.MapToDto(updated!);
         }
 
@@ -105,6 +110,8 @@ namespace _2_Services.Services
             _wishlistRepository.Update(wishlist);
             await _unitOfWork.SaveChangesAsync();
 
+            _logger.LogInformation("Removed WishlistItemId={WishlistItemId} from wishlist for CustomerId={CustomerId}", wishlistItemId, customerId);
+
             var updated = await _wishlistRepository.GetWishlistByCustomerIdAsync(customerId);
             return WishlistMapper.MapToDto(updated!);
         }
@@ -121,6 +128,8 @@ namespace _2_Services.Services
             wishlist.WishlistItems.Clear();
             _wishlistRepository.Update(wishlist);
             await _unitOfWork.SaveChangesAsync();
+
+            _logger.LogInformation("Cleared wishlist for CustomerId={CustomerId}", customerId);
         }
 
         

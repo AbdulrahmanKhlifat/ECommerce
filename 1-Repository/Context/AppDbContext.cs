@@ -1,6 +1,7 @@
 using _1_Repository.Data;
 using Microsoft.EntityFrameworkCore;
 
+
 namespace _1_Repository.Context
 {
     public class AppDbContext : DbContext
@@ -52,6 +53,8 @@ namespace _1_Repository.Context
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+
+
             base.OnModelCreating(modelBuilder);
 
             // modelBuilder.ApplyConfiguration(new CustomerConfiguration()); // not best practice

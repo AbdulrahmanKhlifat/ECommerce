@@ -17,6 +17,11 @@ namespace _1_Repository.Config
             builder.Property(o => o.TotalPrice)
                 .HasColumnType("decimal(18,2)");
 
+            builder.Property(o => o.OrderDate)
+                   .HasColumnName("OrderDate")
+                   .IsRequired();
+
+
             builder.HasOne(c => c.Customer)
                 .WithMany(c => c.Orders)
                 .HasForeignKey(c => c.CustomerId);

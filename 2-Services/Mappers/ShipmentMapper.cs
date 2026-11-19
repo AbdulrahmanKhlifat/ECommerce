@@ -6,7 +6,7 @@ public class ShipmentMapper
     {
         Id = s.Id,
         OrderId = s.OrderId,
-        ShipmentDate = s.Date,
+        ShipmentDate = s.ShipmentDate,
         EstimatedDeliveryDate = s.EstimatedDeliveryDate,
         ActualDeliveryDate = s.ActualDeliveryDate,
         TrackingNumber = s.TrackingNumber,

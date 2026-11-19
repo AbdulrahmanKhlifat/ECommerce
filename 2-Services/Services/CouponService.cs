@@ -1,6 +1,7 @@
 using _1_Repository.Data;
 using _1_Repository.Interfaces;
 using _2_Services.Interfaces;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,15 +14,18 @@ namespace _2_Services.Services
         private readonly ICouponRepository _couponRepository;
         private readonly ICouponUsageRepository _couponUsageRepository;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ILogger<CouponService> _logger;
 
         public CouponService(
             ICouponRepository couponRepository,
             ICouponUsageRepository couponUsageRepository,
-            IUnitOfWork unitOfWork)
+            IUnitOfWork unitOfWork,
+            ILogger<CouponService> logger)
         {
             _couponRepository = couponRepository;
             _couponUsageRepository = couponUsageRepository;
             _unitOfWork = unitOfWork;
+            _logger = logger;
         }
 
         public async Task<List<CouponDto>> GetAllCouponsAsync()
@@ -75,6 +79,9 @@ namespace _2_Services.Services
             await _couponRepository.AddAsync(coupon);
             await _unitOfWork.SaveChangesAsync();
 
+            _logger.LogInformation("Coupon created: CouponId={CouponId}, Code={CouponCode}, DiscountType={DiscountType}, Value={DiscountValue}",
+                coupon.Id, coupon.Code, coupon.DiscountType, coupon.DiscountValue);
+
             return CouponMapper.MapToDto(coupon);
         }
 
@@ -105,6 +112,8 @@ namespace _2_Services.Services
             _couponRepository.Update(coupon);
             await _unitOfWork.SaveChangesAsync();
 
+            _logger.LogInformation("Coupon updated: CouponId={CouponId}, Code={CouponCode}", id, coupon.Code);
+
             return CouponMapper.MapToDto(coupon);
         }
 
@@ -119,6 +128,8 @@ namespace _2_Services.Services
 
             _couponRepository.Delete(coupon);
             await _unitOfWork.SaveChangesAsync();
+
+            _logger.LogInformation("Coupon deleted: CouponId={CouponId}", id);
             return true;
         }
 
@@ -129,18 +140,33 @@ namespace _2_Services.Services
 
             var coupon = await _couponRepository.GetByCodeAsync(code.ToUpperInvariant());
             if (coupon == null || !coupon.IsActive)
+            {
+                _logger.LogWarning("Coupon validation failed for CustomerId={CustomerId}, Code={CouponCode}: Coupon is invalid or inactive", customerId, code);
                 throw new BadRequestException("Coupon is invalid or inactive.");
+            }
 
             var now = DateTime.UtcNow;
             if (now < coupon.StartDate || now > coupon.EndDate)
+            {
+                _logger.LogWarning("Coupon validation failed for CustomerId={CustomerId}, Code={CouponCode}: Coupon is expired or not yet valid", customerId, code);
                 throw new BadRequestException("Coupon has expired or is not yet valid.");
+            }
 
             if (coupon.UsageLimit.HasValue && coupon.TimesUsed >= coupon.UsageLimit.Value)
+            {
+                _logger.LogWarning("Coupon validation failed for CustomerId={CustomerId}, Code={CouponCode}: Usage limit reached", customerId, code);
                 throw new BadRequestException("Coupon usage limit has been reached.");
+            }
 
             var hasUsed = await _couponUsageRepository.HasCustomerUsedCouponAsync(customerId, coupon.Id);
             if (hasUsed)
+            {
+                _logger.LogWarning("Coupon validation failed for CustomerId={CustomerId}, Code={CouponCode}: Already used by customer", customerId, code);
                 throw new BadRequestException("You have already used this coupon.");
+            }
+
+            _logger.LogInformation("Coupon validated successfully for CustomerId={CustomerId}, Code={CouponCode}, DiscountValue={DiscountValue}",
+                customerId, code, coupon.DiscountValue);
 
             return new CouponDto
             {

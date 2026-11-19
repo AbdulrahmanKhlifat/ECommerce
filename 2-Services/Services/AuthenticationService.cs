@@ -85,7 +85,6 @@ namespace _2_Services.Services
         {
             ValidateRequestNotNull(request, "Refresh token request cannot be null.");
 
-           
             _logger.LogDebug("Attempting to refresh access token.");
 
             var storedToken = await _refreshTokenService.ValidateRefreshTokenAsync(request.RefreshToken);
@@ -135,12 +134,24 @@ namespace _2_Services.Services
                 };
             }
 
-            var verification = await _emailVerificationService.CreateEmailVerificationAsync(user.Id);
+            // Always return the same generic message regardless of SMTP result.
+            // This prevents user enumeration via different response codes/messages.
+            string? verificationId = null;
+            try
+            {
+                var verification = await _emailVerificationService.CreateEmailVerificationAsync(user.Id);
+                verificationId = verification.VerificationId;
+            }
+            catch (Exception ex)
+            {
+                // Log the SMTP/internal failure, but do NOT surface it to the caller.
+                _logger.LogError(ex, "Failed to send password reset email for user {UserId}. SMTP or verification error.", user.Id);
+            }
 
             return new ForgotPasswordResponse
             {
-                Message = "Password reset instructions have been sent to your email.",
-                VerificationId = verification.VerificationId
+                Message = "If an account with that email exists, password reset instructions have been sent.",
+                VerificationId = verificationId
             };
         }
 

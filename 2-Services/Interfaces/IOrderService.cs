@@ -7,5 +7,7 @@ namespace _2_Services.Interfaces
         Task<OrderDetailDto?> GetOrderByIdForAdminAsync(int orderId);
         Task<OrderDetailDto?> GetOrderByIdAsync(int orderId, int customerId, bool isAdmin);
         Task<OrderDetailDto> PlaceOrderAsync(int customerId, PlaceOrderDto dto);
+
+        Task<bool> ConfirmPaymentAsync(int orderId, int userId, string paymentIntentId);
     }
 }

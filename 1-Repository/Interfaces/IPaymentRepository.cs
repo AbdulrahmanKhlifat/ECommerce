@@ -6,5 +6,7 @@ namespace _1_Repository.Interfaces
     {
         Task<Payment?> GetByOrderIdAsync(int orderId);
 
+
+
     }
 }

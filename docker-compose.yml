@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
@@ -33,6 +35,21 @@ services:
       - elasticsearch
     networks:
       - elastic-net
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant-vector-db
+    ports:
+      - "6333:6333" # HTTP REST API & Dashboard
+      - "6334:6334" # gRPC Protocol
+    volumes:
+      - qdrant_data:/qdrant/storage
+    restart: always
+    networks:
+      - elastic-net
+
+volumes:
+  qdrant_data:
 
 networks:
   elastic-net:

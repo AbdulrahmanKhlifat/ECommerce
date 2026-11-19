@@ -4,7 +4,10 @@
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
 
-# ignore frontend directory
+# Frontend directories
+frontend/
+vanilla-frontend/
+.vscode/
 
 
 # User-specific files
@@ -380,3 +383,6 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Moq test 
+ProductTest/

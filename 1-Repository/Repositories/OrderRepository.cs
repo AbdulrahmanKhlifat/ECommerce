@@ -43,6 +43,7 @@ public class OrderRepository : IOrderRepository
             .ThenInclude(oi => oi.Product)
             .Include(o => o.ShippingAddress)
             .Where(o => o.CustomerId == customerId)
+            .AsNoTracking()
             .ToListAsync();
     }
 
@@ -52,7 +53,17 @@ public class OrderRepository : IOrderRepository
             .Include(o => o.OrderItems)
             .ThenInclude(oi => oi.Product)
             .Include(o => o.ShippingAddress)
+            .AsNoTracking()
             .FirstOrDefaultAsync(o => o.Id == orderId);
+    }
+
+    public async Task<Order?> GetOrderWithPaymentAndShipmentAsync(int orderId, int customerId)
+    {
+        return await _context.Orders
+            .Include(o => o.Payment)
+            .Include(o => o.Shipment)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(o => o.Id == orderId && o.CustomerId == customerId);
     }
 
 }

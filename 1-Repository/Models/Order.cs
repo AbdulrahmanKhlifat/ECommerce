@@ -1,10 +1,13 @@
+﻿
 
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace _1_Repository.Data
 {
     public class Order
     {
         public int Id { get; set; }
+
 
         public DateTime OrderDate { get; set; }
 
