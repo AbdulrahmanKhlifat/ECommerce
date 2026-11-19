@@ -30,22 +30,70 @@ function toast(msg, type = '') {
 }
 const fail = e => toast(e.message || String(e), 'error');
 
-function productImage(p, cls = 'card-img') {
-  const src = safeUrl(p?.imageUrl);
-  return `<div class="${cls}">${src
-    ? `<img src="${src}" alt="" loading="lazy" data-mono="${initials(p.name)}">`
-    : `<span class="monogram">${initials(p?.name)}</span>`}</div>`;
+/* ---------- Product art ----------
+   Products without a photo get a generated poster: a colour pair and shape layout
+   picked from the name hash, plus a line icon matched from the name/category. */
+const PALETTES = [
+  ['#2B4ACB', '#5C78F0', '#FFD23F'], ['#FF7A45', '#E0521F', '#FFD9C2'], ['#1FAE7A', '#13865D', '#C8F5E2'],
+  ['#8E7CFF', '#6E5BE8', '#FFD23F'], ['#FF5C8A', '#E03A6A', '#FFE0EA'], ['#2FA8F0', '#1786C9', '#D6F0FF'],
+  ['#F2B705', '#D99A00', '#FFF3C4'], ['#243049', '#34436A', '#FFD23F'],
+];
+const ICONS = [
+  [/head(phone|set)|earbud|airpod/, '<path d="M4 15v-3a8 8 0 0 1 16 0v3"/><rect x="3" y="14" width="4" height="7" rx="1.5"/><rect x="17" y="14" width="4" height="7" rx="1.5"/>'],
+  [/speaker|audio|sound/, '<rect x="6" y="2" width="12" height="20" rx="2.5"/><circle cx="12" cy="14.5" r="3.5"/><circle cx="12" cy="7" r="1.3"/>'],
+  [/monitor|screen|tv|display/, '<rect x="2.5" y="4" width="19" height="12" rx="1.5"/><path d="M9 20h6M12 16v4"/>'],
+  [/keyboard/, '<rect x="2" y="7" width="20" height="10" rx="2"/><path d="M6 10.5h1M9.5 10.5h1M13 10.5h1M16.5 10.5h1M7 13.5h10"/>'],
+  [/laptop|notebook|computer|macbook/, '<rect x="4" y="5" width="16" height="11" rx="1.5"/><path d="M2 19h20"/>'],
+  [/phone|mobile|tablet/, '<rect x="7" y="2" width="10" height="20" rx="2.5"/><path d="M11 18.5h2"/>'],
+  [/camera|lens/, '<path d="M3 8h4l2-2.5h6L17 8h4v11H3z"/><circle cx="12" cy="13.5" r="3.5"/>'],
+  [/watch|clock/, '<path d="M9 2h6v4H9zM9 18h6v4H9z"/><circle cx="12" cy="12" r="6"/><path d="M12 9.5V12l1.5 1.5"/>'],
+  [/game|console|controller/, '<path d="M7 8h10a5 5 0 0 1 0 10l-2.5-2h-5L7 18A5 5 0 0 1 7 8z"/><path d="M8 11.5v3M6.5 13h3M16 12h.01M17.5 14h.01"/>'],
+  [/shoe|sneaker|boot|running|trainer/, '<path d="M2.5 16.5c0-3 .8-7 1.8-8.5l4.4 3.2c2 1.3 5 2.1 8.3 2.3 2.3.1 4.5 1 4.5 3.3v.7H2.5z"/><path d="M2.5 19.5h19M9 12l1.5-2M12 13l1.5-2"/>'],
+  [/shirt|tee|hoodie|jacket|dress|cloth|wear|sweater/, '<path d="M8.5 3 12 5l3.5-2 5 4-2.8 3.2-1.7-1V21H8V9.2l-1.7 1L3.5 7z"/>'],
+  [/skillet|pan|pot|wok/, '<circle cx="9.5" cy="13" r="6.5"/><circle cx="9.5" cy="13" r="3.5"/><path d="M16 13h6"/>'],
+  [/cup|mug|coffee|pour|tea|kettle/, '<path d="M4 8h12v5.5a5.5 5.5 0 0 1-5.5 5.5h-1A5.5 5.5 0 0 1 4 13.5z"/><path d="M16 10h1.5a2.5 2.5 0 0 1 0 5H16M8 2.5v3M12 2.5v3"/>'],
+  [/mat|yoga/, '<rect x="2" y="9" width="14" height="9" rx="1"/><circle cx="18" cy="13.5" r="4.5"/><circle cx="18" cy="13.5" r="1.5"/>'],
+  [/ball|sport|fitness|gym|dumbbell/, '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a13 13 0 0 1 0 18M12 3a13 13 0 0 0 0 18"/>'],
+  [/lamp|light|bulb/, '<path d="M8 3h8l3.5 8h-15z"/><path d="M12 11v8M8 21h8"/>'],
+  [/chair|sofa|couch|furniture|desk|table/, '<path d="M6 11V5h12v6"/><rect x="4" y="11" width="16" height="5" rx="1"/><path d="M6 16v4M18 16v4"/>'],
+  [/plant|garden|flower/, '<path d="M12 21V11"/><path d="M12 11c0-4.5 3-7 7.5-7 0 4.5-3 7-7.5 7zM12 14c0-3.5-2.5-6-6.5-6 0 3.5 2.5 6 6.5 6z"/><path d="M8 21h8"/>'],
+  [/book|novel|magazine/, '<path d="M4 4h7a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2H4zM20 4h-5a2 2 0 0 0-2 2v14a2 2 0 0 1 2-2h5z"/>'],
+  [/perfume|beauty|cream|bottle|serum|lotion/, '<path d="M9.5 2h5v3.5l2.5 3.5V21H7V9l2.5-3.5z"/><path d="M7 13h10"/>'],
+  [/toy|kid|baby|lego/, '<rect x="4" y="9" width="16" height="11" rx="1.5"/><rect x="6.5" y="5.5" width="4" height="3.5" rx="1"/><rect x="13.5" y="5.5" width="4" height="3.5" rx="1"/>'],
+  [/food|snack|grocery|fruit/, '<path d="M12 7c-4-3-9 0-8 6 .8 4.5 4 8 6 8 1 0 1.3-.6 2-.6s1 .6 2 .6c2 0 5.2-3.5 6-8 1-6-4-9-8-6z"/><path d="M12 7c0-2 1-4 3-4.5"/>'],
+];
+const BAG_ICON = '<path d="M4.5 8h15l-1.2 13H5.7z"/><path d="M9 8a3 3 0 0 1 6 0"/>';
+
+function hashStr(s) { let h = 2166136261; for (const c of String(s)) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return h >>> 0; }
+
+function artSvg(name, category = '') {
+  const h = hashStr(name);
+  const [bg, deep, light] = PALETTES[h % PALETTES.length];
+  const text = `${name} ${category}`.toLowerCase();
+  const icon = (ICONS.find(([re]) => re.test(text)) || [, BAG_ICON])[1];
+  const layouts = [
+    `<circle cx="168" cy="168" r="92" fill="${deep}"/><path d="M0 0h70a70 70 0 0 1-70 70z" fill="${light}" opacity=".9"/>`,
+    `<path d="M0 200V110a90 90 0 0 1 90 90z" fill="${deep}"/><rect x="128" y="18" width="54" height="54" rx="27" fill="${light}" opacity=".9"/><path d="M200 90v110h-60a60 60 0 0 1 60-110z" fill="${deep}" opacity=".6"/>`,
+    `<rect x="110" y="-30" width="140" height="140" transform="rotate(30 180 40)" fill="${deep}"/><circle cx="34" cy="172" r="18" fill="${light}"/>`,
+    `<path d="M30 200V120a70 70 0 0 1 140 0v80z" fill="${deep}"/><circle cx="170" cy="34" r="14" fill="${light}"/>`,
+    `<g fill="${deep}"><rect x="0" y="22" width="200" height="14"/><rect x="0" y="50" width="200" height="14"/><rect x="0" y="78" width="200" height="14"/></g><circle cx="40" cy="160" r="26" fill="${light}" opacity=".9"/>`,
+  ];
+  return `<svg class="art" viewBox="0 0 200 200" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <rect width="200" height="200" fill="${bg}"/>${layouts[(h >>> 4) % layouts.length]}
+    <ellipse cx="100" cy="150" rx="46" ry="7" fill="#000" opacity=".18"/>
+    <g transform="translate(100 104) scale(3.4) translate(-12 -12)" fill="#fff" stroke="#141A28" stroke-width="1.15" stroke-linejoin="round" stroke-linecap="round">${icon}</g>
+  </svg>`;
 }
 
-// Broken product images fall back to the monogram tile.
-document.addEventListener('error', e => {
-  const img = e.target;
-  if (img.tagName !== 'IMG' || !img.dataset.mono) return;
-  const span = document.createElement('span');
-  span.className = 'monogram';
-  span.textContent = img.dataset.mono;
-  img.replaceWith(span);
-}, true);
+function productImage(p, cls = 'card-img') {
+  const src = safeUrl(p?.imageUrl);
+  return `<div class="${cls}">${artSvg(p?.name, p?.categoryName)}${src ? `<img src="${src}" alt="" loading="lazy">` : ''}</div>`;
+}
+// Small square art for cart/order rows; uses the cached product when available.
+const thumb = (productId, name) => productImage(productById(productId) || { name }, 'thumb');
+
+// Broken product photos are removed so the generated art underneath shows.
+document.addEventListener('error', e => { if (e.target.tagName === 'IMG' && e.target.closest('.card-img,.product-img,.thumb')) e.target.remove(); }, true);
 
 function requireLogin() {
   if (Auth.loggedIn) return true;
@@ -253,22 +301,31 @@ $('#searchForm').addEventListener('submit', e => {
 });
 
 /* ---------- Views ---------- */
+const HEART = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>';
+const PLUS = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
+
+// Weekday the order arrives by, from the 3–5 day shipping promise.
+function arrivalDay(days = 5) {
+  const d = new Date(); d.setDate(d.getDate() + days);
+  return d.toLocaleDateString('en-US', { weekday: 'long' });
+}
+
 function productCard(p) {
   const out = p.stock <= 0;
-  return `<article class="card">
-    ${productImage(p)}
-    ${out ? '<span class="sold-out">Sold out</span>' : ''}
-    <button class="heart" type="button" data-wish="${p.id}" aria-pressed="${state.wishlist.has(p.id)}" aria-label="Save ${esc(p.name)}">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>
-    </button>
+  return `<article class="card${out ? ' is-out' : ''}">
+    <div class="card-media">
+      ${productImage(p)}
+      <span class="price tag-on-art">${fmt(p.price)}</span>
+      ${out ? '<span class="sold-out">Sold out</span>' : ''}
+      <button class="heart" type="button" data-wish="${p.id}" aria-pressed="${state.wishlist.has(p.id)}" aria-label="Save ${esc(p.name)}">${HEART}</button>
+    </div>
     <div class="card-body">
-      <span class="card-cat">${esc(p.categoryName)}</span>
-      <h3><a href="#/product/${p.id}">${esc(p.name)}</a></h3>
-      ${!out && p.stock < 6 ? `<span class="stock-low">Only ${p.stock} left</span>` : ''}
-      <div class="card-foot">
-        <span class="price">${fmt(p.price)}</span>
-        <button class="btn small" type="button" data-add="${p.id}" ${out ? 'disabled' : ''}>Add to cart</button>
+      <div class="card-text">
+        <span class="card-cat">${esc(p.categoryName)}</span>
+        <h3><a href="#/product/${p.id}">${esc(p.name)}</a></h3>
+        ${!out && p.stock < 6 ? `<span class="stock-low">Only ${p.stock} left</span>` : ''}
       </div>
+      <button class="add-round" type="button" data-add="${p.id}" ${out ? 'disabled' : ''} aria-label="Add ${esc(p.name)} to cart" title="Add to cart">${PLUS}</button>
     </div>
   </article>`;
 }
@@ -278,54 +335,85 @@ main.addEventListener('click', e => {
   const add = e.target.closest('[data-add]');
   if (add) { addToCart(Number(add.dataset.add)); return; }
   const wish = e.target.closest('[data-wish]');
-  if (wish) toggleWish(Number(wish.dataset.wish), wish);
+  if (wish) { toggleWish(Number(wish.dataset.wish), wish); return; }
+  const ask = e.target.closest('[data-ask]');
+  if (ask) { openDrawer('chatDrawer'); sendChat(ask.dataset.ask); }
 });
+
+function renderCatNav(active) {
+  const nav = $('#catnav');
+  nav.innerHTML = `<a href="#/" ${!active ? 'aria-current="page"' : ''}>All products</a>` +
+    state.categories.filter(c => c.productCount !== 0).map(c =>
+      `<a href="#/?cat=${c.id}" ${c.id === active ? 'aria-current="page"' : ''}>${esc(c.name)}</a>`).join('');
+}
 
 async function viewShop(params) {
   const q = params.get('q') || '';
   const cat = Number(params.get('cat')) || null;
   const sort = params.get('sort') || 'featured';
+  const home = !q && !cat;
   $('#searchInput').value = q;
   main.innerHTML = `
-    <section class="hero">
-      <h1>Everything for the week, in one cart.</h1>
-      <div class="hero-side">
-        <p>Browse by category, search the full catalog, or ask the assistant to pick products for you.</p>
-        <div class="chips" id="chips" aria-label="Categories"></div>
+    ${home ? `<section class="hero">
+      <div class="hero-copy">
+        <h1>Order today. Unpack it by ${arrivalDay()}.</h1>
+        <p>Everyday tech, kitchen and sports gear from one cart, with delivery in 3 to 5 days.</p>
+        <div class="hero-cta">
+          <a class="btn primary big" href="#all">Shop the catalog</a>
+          <button class="btn big" type="button" data-ask="What are your best products right now?">Ask the assistant</button>
+        </div>
       </div>
+      <div class="collage" id="collage" aria-hidden="true"></div>
     </section>
-    <div class="toolbar">
-      <h2 id="listTitle">All products</h2>
-      <label><span class="sr">Sort by</span>
-        <select id="sort">
-          <option value="featured">Featured</option>
-          <option value="price-asc">Price: low to high</option>
-          <option value="price-desc">Price: high to low</option>
-          <option value="name">Name</option>
-        </select>
-      </label>
-    </div>
-    <div class="grid" id="grid">${'<div class="skeleton"></div>'.repeat(8)}</div>`;
+    <ul class="perks">
+      <li><svg viewBox="0 0 24 24"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="1.8"/><circle cx="17" cy="18" r="1.8"/></svg><span><strong>Delivered in 3 to 5 days</strong>Track every order from your account</span></li>
+      <li><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h3"/></svg><span><strong>Card or cash on delivery</strong>Pick at checkout, coupons welcome</span></li>
+      <li><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/></svg><span><strong>An assistant that knows the shelves</strong>Ask for anything by budget or use</span></li>
+    </ul>
+    <section class="section" id="catSection"><div class="section-head"><h2>Shop by category</h2></div><div class="cat-tiles" id="catTiles"></div></section>
+    <section class="section" id="lowSection" hidden><div class="section-head"><h2>Almost gone</h2><p class="muted">Low stock. Once they're out, they're out.</p></div><div class="rail" id="lowRail"></div></section>` : ''}
+    <section class="section" id="all">
+      <div class="toolbar">
+        <h2 id="listTitle">${home ? 'Everything in the store' : 'Loading…'}</h2>
+        <label class="sort"><span>Sort</span>
+          <select id="sort">
+            <option value="featured">Featured</option>
+            <option value="price-asc">Price, low to high</option>
+            <option value="price-desc">Price, high to low</option>
+            <option value="name">Name</option>
+          </select>
+        </label>
+      </div>
+      <div class="grid" id="grid">${'<div class="skeleton"></div>'.repeat(8)}</div>
+    </section>`;
   $('#sort').value = sort;
   $('#sort').addEventListener('change', e => {
     params.set('sort', e.target.value);
     location.hash = '#/?' + params.toString();
   });
+  main.querySelector('a[href="#all"]')?.addEventListener('click', e => { e.preventDefault(); $('#all').scrollIntoView({ behavior: 'smooth' }); });
 
   try {
     const [cats, all] = await Promise.all([loadCategories(), loadProducts()]);
-    const chips = $('#chips');
-    chips.innerHTML = `<button class="chip" type="button" data-cat="" aria-pressed="${!cat && !q}">All</button>` +
-      cats.filter(c => c.productCount !== 0).map(c =>
-        `<button class="chip" type="button" data-cat="${c.id}" aria-pressed="${c.id === cat}">${esc(c.name)}</button>`).join('');
-    chips.addEventListener('click', e => {
-      const b = e.target.closest('[data-cat]');
-      if (b) location.hash = b.dataset.cat ? `#/?cat=${b.dataset.cat}` : '#/';
-    });
+    renderCatNav(cat);
 
-    let list = all, title = 'All products';
+    if (home) {
+      const featured = [...all].filter(p => p.stock > 0).sort((a, b) => b.price - a.price).slice(0, 3);
+      $('#collage').innerHTML = featured.map((p, i) => `<div class="collage-card c${i}">${productImage(p)}<span class="price">${fmt(p.price)}</span><span class="collage-name">${esc(p.name)}</span></div>`).join('');
+      const shown = cats.filter(c => c.productCount !== 0);
+      $('#catTiles').innerHTML = shown.map(c => {
+        const count = all.filter(p => p.categoryId === c.id).length || c.productCount || 0;
+        const sample = all.find(p => p.categoryId === c.id);
+        return `<a class="cat-tile" href="#/?cat=${c.id}">${artSvg(sample?.name || c.name, c.name)}<span class="cat-label"><strong>${esc(c.name)}</strong><span>${count} product${count === 1 ? '' : 's'}</span></span></a>`;
+      }).join('');
+      $('#catSection').hidden = !shown.length;
+      const low = all.filter(p => p.stock > 0 && p.stock < 6);
+      if (low.length) { $('#lowSection').hidden = false; $('#lowRail').innerHTML = low.map(productCard).join(''); }
+    }
+
+    let list = all, title = 'Everything in the store';
     if (q) {
-      title = `Results for "${q}"`;
+      title = `Results for “${q}”`;
       try { list = (await api('/Product/search?query=' + encodeURIComponent(q))).filter(p => p.isActive !== false); }
       catch { const s = q.toLowerCase(); list = all.filter(p => (p.name + ' ' + p.categoryName).toLowerCase().includes(s)); }
     } else if (cat) {
@@ -340,11 +428,11 @@ async function viewShop(params) {
       featured: (a, b) => (b.stock > 0) - (a.stock > 0),
     };
     list = [...list].sort(sorters[sort] || sorters.featured);
-    $('#listTitle').textContent = `${title} (${list.length})`;
+    $('#listTitle').innerHTML = `${esc(title)} <span class="count">${list.length}</span>`;
     $('#grid').innerHTML = list.length ? list.map(productCard).join('')
       : `<div class="empty" style="grid-column:1/-1"><h3>Nothing matches that yet</h3><p>Try a shorter search, or ask the assistant to suggest something close.</p><a class="btn" href="#/">Show all products</a></div>`;
   } catch (e) {
-    $('#grid').innerHTML = `<div class="empty" style="grid-column:1/-1"><h3>Products didn't load</h3><p>${esc(e.message)}</p><button class="btn" onclick="route()">Try again</button></div>`;
+    $('#grid').innerHTML = `<div class="empty" style="grid-column:1/-1"><h3>Products didn't load</h3><p>${esc(e.message)}</p><button class="btn" type="button" onclick="route()">Try again</button></div>`;
   }
 }
 
@@ -356,26 +444,38 @@ async function viewProduct(id) {
     return;
   }
   document.title = `${p.name} | SmartStore`;
+  loadCategories().then(() => renderCatNav(p.categoryId)).catch(() => {});
   const out = p.stock <= 0;
+  const stockPct = Math.min(100, Math.round(p.stock / 20 * 100));
   main.innerHTML = `
-    <nav class="crumbs" aria-label="Breadcrumb"><a href="#/">Shop</a> / <a href="#/?cat=${p.categoryId}">${esc(p.categoryName)}</a> / ${esc(p.name)}</nav>
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="#/">Shop</a><span>/</span><a href="#/?cat=${p.categoryId}">${esc(p.categoryName)}</a></nav>
     <div class="product">
       ${productImage(p, 'product-img')}
       <div class="product-info">
+        <a class="card-cat" href="#/?cat=${p.categoryId}">${esc(p.categoryName)}</a>
         <h1>${esc(p.name)}</h1>
         <span class="price big">${fmt(p.price)}</span>
-        <p class="muted" style="margin-top:14px">${out ? 'Out of stock' : p.stock < 6 ? `Only ${p.stock} left in stock` : 'In stock, ships in 3 to 5 days'}</p>
+        <div class="stock">
+          <div class="meter" role="img" aria-label="${out ? 'Out of stock' : `${p.stock} in stock`}"><span style="width:${out ? 0 : Math.max(stockPct, 6)}%" class="${p.stock < 6 ? 'low' : ''}"></span></div>
+          <p>${out ? 'Out of stock right now.' : p.stock < 6 ? `Only ${p.stock} left in stock.` : `${p.stock} in stock.`}</p>
+        </div>
         <div class="buy">
           <div class="qty">
             <button type="button" data-step="-1" aria-label="Decrease quantity">−</button>
             <input id="qty" type="number" min="1" max="${Math.max(1, p.stock)}" value="1" aria-label="Quantity" />
             <button type="button" data-step="1" aria-label="Increase quantity">+</button>
           </div>
-          <button class="btn primary" id="addBtn" type="button" ${out ? 'disabled' : ''}>Add to cart</button>
-          <button class="btn" type="button" data-wish="${p.id}" aria-pressed="${state.wishlist.has(p.id)}">Save</button>
+          <button class="btn primary big grow" id="addBtn" type="button" ${out ? 'disabled' : ''}>Add to cart</button>
+          <button class="heart inline" type="button" data-wish="${p.id}" aria-pressed="${state.wishlist.has(p.id)}" aria-label="Save ${esc(p.name)}">${HEART}</button>
         </div>
+        <ul class="facts">
+          <li><strong>Arrives by ${arrivalDay()}</strong><span>if you order today</span></li>
+          <li><strong>Card or cash</strong><span>choose at checkout</span></li>
+        </ul>
+        <button class="ask-link" type="button" data-ask="Tell me about ${esc(p.name)} and suggest anything that goes well with it.">Ask the assistant about this product</button>
       </div>
     </div>
+    <section class="section" id="related" hidden><div class="section-head"><h2>More in ${esc(p.categoryName)}</h2></div><div class="rail" id="relatedRail"></div></section>
     <section class="reviews" id="reviews"><h2>Reviews</h2><p class="muted">Loading reviews…</p></section>`;
   const qty = $('#qty');
   main.querySelectorAll('[data-step]').forEach(b => b.addEventListener('click', () => {
@@ -386,8 +486,13 @@ async function viewProduct(id) {
     if (!(n >= 1 && n <= p.stock)) { toast(`Choose a quantity between 1 and ${p.stock}.`, 'error'); return; }
     addToCart(p.id, n);
   });
+  loadProducts().then(all => {
+    const rel = all.filter(x => x.categoryId === p.categoryId && x.id !== p.id).slice(0, 4);
+    if (rel.length) { $('#related').hidden = false; $('#relatedRail').innerHTML = rel.map(productCard).join(''); }
+  }).catch(() => {});
   renderReviews(p.id);
 }
+
 
 async function renderReviews(productId) {
   const box = $('#reviews');
@@ -604,7 +709,7 @@ async function viewCheckout() {
       </form>
       <aside class="panel">
         <h2>Order summary</h2>
-        ${items.map(i => `<div class="list-row"><div class="thumb">${initials(i.productName)}</div><div class="grow"><strong>${esc(i.productName)}</strong><br><span class="muted">${i.quantity} × ${fmt(i.unitPrice)}</span></div><span>${fmt(i.subtotal)}</span></div>`).join('')}
+        ${items.map(i => `<div class="list-row">${thumb(i.productId, i.productName)}<div class="grow"><strong>${esc(i.productName)}</strong><br><span class="muted">${i.quantity} × ${fmt(i.unitPrice)}</span></div><span>${fmt(i.subtotal)}</span></div>`).join('')}
         <form id="couponForm" style="display:flex;gap:8px;margin:16px 0">
           <label class="sr" for="coupon">Coupon code</label>
           <input id="coupon" placeholder="Coupon code" maxlength="50" style="flex:1;min-width:0;min-height:44px;padding:0 14px;border:1.5px solid var(--line);border-radius:999px;background:var(--surface)" />
@@ -708,7 +813,7 @@ async function viewOrder(id) {
     <div class="two-col">
       <section class="panel">
         <h2>Items</h2>
-        ${o.items.map(i => `<div class="list-row"><div class="thumb">${initials(i.productName)}</div>
+        ${o.items.map(i => `<div class="list-row">${thumb(i.productId, i.productName)}
           <div class="grow"><a href="#/product/${i.productId}"><strong>${esc(i.productName)}</strong></a><br><span class="muted">${i.quantity} × ${fmt(i.unitPrice)}</span></div>
           <span>${fmt(i.subtotal)}</span></div>`).join('')}
       </section>
@@ -806,6 +911,7 @@ async function route() {
   const params = new URLSearchParams(query);
   const parts = path.split('/').filter(Boolean);
   document.title = 'SmartStore';
+  if (!['', 'product'].includes(parts[0] || '')) renderCatNav(-1);
   closeDrawers();
   window.scrollTo(0, 0);
   const views = {

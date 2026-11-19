@@ -7,7 +7,7 @@
   <meta name="description" content="Shop the SmartStore catalog, manage your cart and orders, and ask the AI assistant for help." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,700;12..96,800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,200..800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/styles.css" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%232B4ACB'/><path d='M9 12h14l-1.5 11h-11z' fill='%23FFD23F'/><path d='M12 12a4 4 0 0 1 8 0' stroke='%23FFD23F' stroke-width='2' fill='none'/></svg>" />
 </head>
@@ -46,12 +46,21 @@
         </button>
       </nav>
     </div>
+    <nav class="catnav" id="catnav" aria-label="Categories"></nav>
   </header>
 
   <main id="main" tabindex="-1"></main>
 
   <footer class="footer">
-    <p>SmartStore. Prices include VAT. Orders ship within 3 to 5 days.</p>
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <strong>SmartStore</strong>
+        <p>Everyday tech, kitchen and sports gear, delivered in 3 to 5 days.</p>
+      </div>
+      <nav aria-label="Shop"><h3>Shop</h3><a href="#/">All products</a><a href="#/wishlist">Saved items</a><a href="#/assistant">Shopping assistant</a></nav>
+      <nav aria-label="Your account"><h3>Your account</h3><a href="#/account">Profile and addresses</a><a href="#/orders">Orders and tracking</a><a href="#/forgot">Reset password</a></nav>
+    </div>
+    <p class="footer-legal">Prices include VAT. Pay by card or cash on delivery.</p>
   </footer>
 
   <!-- Cart drawer: the receipt -->
